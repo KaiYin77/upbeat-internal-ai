@@ -24,13 +24,13 @@
 ./install.sh --list
 
 # 安裝全部 / Install all
-./install.sh ticket develop wiki redmine
+./install.sh pm dev wiki redmine
 
 # 只安裝指定項目 / Install specific components
 ./install.sh redmine
 
 # 移除 / Uninstall
-./install.sh --uninstall ticket redmine
+./install.sh --uninstall pm redmine
 ```
 
 安裝完成後**重啟 Claude Code**，slash commands 與 MCP servers 即生效。  
@@ -43,17 +43,18 @@ After install, **restart Claude Code** so all commands and servers load.
 Skills 以 Markdown 定義，安裝後在 Claude Code 中用 `/指令名稱` 呼叫。  
 Skills are Markdown files — once installed, invoke them with `/command-name` in any Claude Code session.
 
-### `/ticket` — Ticket 管理流程
+### `/pm` — PM 規劃與 Ticket 管理
 
-開票 → 追蹤 → 驗收 → 結案 → Wiki 同步的完整循環。
+規劃 → 開票 → 追蹤 → 驗收 → 結案 → Wiki 同步的完整循環。
 
 | 指令 | 動作 |
 |------|------|
-| `/ticket` 或 `/ticket new` | 從對話解析需求，自動在 `docs/tickets/todo/` 建立 tickets |
-| `/ticket move TKT-NNN <狀態>` | 移動至 `todo / in-progress / in-review / done / archive` |
-| `/ticket close TKT-NNN` | 結案並自動觸發 wiki 同步 |
-| `/ticket wiki TKT-NNN` | 從 `done/` ticket 沉澱 know-how 至 `docs/wiki/` |
-| `/ticket status` | 依資料夾列出所有 tickets |
+| `/pm plan <描述>` | 結構化分析（範圍、依賴、風險、執行順序），確認後才建票 |
+| `/pm` 或 `/pm new` | 從對話解析需求，自動在 `docs/tickets/todo/` 建立 tickets |
+| `/pm move TKT-NNN <狀態>` | 移動至 `todo / in-progress / in-review / done / archive` |
+| `/pm close TKT-NNN` | 結案並自動觸發 wiki 同步 |
+| `/pm wiki TKT-NNN` | 從 `done/` ticket 沉澱 know-how 至 `docs/wiki/` |
+| `/pm status` | 依資料夾列出所有 tickets |
 
 狀態流程：
 
@@ -61,21 +62,21 @@ Skills are Markdown files — once installed, invoke them with `/command-name` i
 archive ←→ todo → in-progress → in-review →（人工驗收）→ done
 ```
 
-> `in-review` 不會自動推進，需人工確認後執行 `/ticket close`。
+> `in-review` 不會自動推進，需人工確認後執行 `/pm close`。
 
 ---
 
-### `/develop` — Ticket 驅動開發
+### `/dev` — Ticket 驅動開發（支援並行批次）
 
-讀取 `todo/` + `in-progress/` 的 tickets，確認需求後進入實作循環，完成後移至 `in-review`。
+讀取 tickets，分析依賴與檔案衝突，分 Wave 執行；獨立 tickets 並行派發，完成後移至 `in-review`。
 
 ```
-/develop           # 列出待開發 tickets，等待選擇
-/develop TKT-007   # 直接進入指定 ticket
-/develop all       # 批次模式：高優先度優先，逐張確認後實作
+/dev           # 列出待開發 tickets，等待選擇
+/dev TKT-007   # 直接進入指定 ticket
+/dev all       # 批次模式：依賴分析 → 分 Wave → 可並行的 tickets 同時實作
 ```
 
-批次模式會先處理 `in-progress` 的票（避免半成品積壓），再依 `high → medium → low` 處理 `todo`。
+批次模式先收尾 `in-progress`，再根據 `depends_on` 和共用檔案分析，將無衝突的 tickets 分組並行。
 
 ---
 

@@ -1,8 +1,8 @@
 ---
-description: "開票、移動狀態、結案與 wiki 同步。用法：/ticket [new|move <TKT-NNN> <狀態>|close <TKT-NNN>|wiki <TKT-NNN>|status]"
+description: "PM 工作流：規劃、開票、狀態流轉、結案與 wiki 同步。用法：/pm [plan <描述>|new|move <TKT-NNN> <狀態>|close <TKT-NNN>|wiki <TKT-NNN>|status]"
 ---
 
-# Ticket 管理系統
+# PM 管理系統
 
 **引數：** `$ARGUMENTS`
 
@@ -27,7 +27,7 @@ docs/tickets/
 ```
 archive ←→ todo → in-progress → in-review → done
                                     ↑               ↓
-                               人工驗收關卡     /ticket wiki
+                               人工驗收關卡     /pm wiki
                             （不自動移至 done）
 ```
 
@@ -41,11 +41,63 @@ archive ←→ todo → in-progress → in-review → done
 
 | 引數 | 模式 |
 |------|------|
+| `plan <描述>` | **規劃模式** — 結構化分析需求，確認後才建票 |
 | （空白）或 `new` | **建票模式** — 解析對話需求，逐一在 `todo/` 建立 ticket |
 | `move TKT-NNN <狀態>` | **移動模式** — 將 ticket 移至對應資料夾 |
 | `close TKT-NNN` | **結案模式** — 移至 `done/`，補修改歷程 |
 | `wiki TKT-NNN` | **Wiki 同步模式** — 從 `done/` 沉澱 know-how，票留在 `done/` |
 | `status` | **列表模式** — 依資料夾列出所有 ticket |
+
+---
+
+## 模式 0：規劃模式（plan <描述>）
+
+> 在建票前先做結構化思考，把模糊需求變成清晰的執行計劃，再轉為 tickets。
+> **不建票、不寫程式**，只分析。確認後才進入建票模式。
+
+### Step 1 — 讀取現有脈絡
+
+- Glob `docs/tickets/**/*.md` — 了解目前有哪些票，避免重複開票
+- Glob `docs/wiki/*.md` — 了解相關背景知識
+- 若描述提到特定模組或功能，讀相關程式碼
+
+### Step 2 — 輸出規劃報告
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+規劃分析：[描述摘要]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【範圍界定】
+  本次涉及：[模組 / 功能 / 系統邊界]
+  不包含：[明確排除的範圍]
+
+【需求拆解】
+  1. [子需求 A] — [type: bug/feature/task] [規模: S/M/L]
+  2. [子需求 B] — ...
+  ...
+
+【依賴關係】
+  - [子需求 B] 依賴 [子需求 A] 先完成
+  - [子需求 C] 與 [子需求 D] 互相獨立，可並行
+
+【風險與注意事項】
+  ⚠️  [潛在風險或需要提前確認的假設]
+
+【建議執行順序】
+  Wave 1（先做）: A
+  Wave 2（A 完成後）: B
+  Wave 3（可並行）: C, D
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+確認後輸入 `yes` 依此建票，或說明要調整的地方。
+```
+
+### Step 3 — 等待確認
+
+- `yes` → 依規劃報告進入**建票模式**，自動建立對應 tickets（含 `depends_on` 欄位）
+- 提出調整 → 修改報告後再次確認
+- `取消` → 結束，不建票
 
 ---
 
@@ -82,6 +134,7 @@ priority: high | medium | low
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 related_wiki:
+depends_on:
 ---
 
 # TKT-NNN：[繁體中文標題]
@@ -107,6 +160,8 @@ related_wiki:
 - YYYY-MM-DD `[建立]` 建立 ticket
 ```
 
+> `depends_on` 填寫依賴的 TKT-NNN（可多個，逗號分隔）。`/dev all` 用此欄位做依賴分析、排出並行分組。
+
 ### Step 4 — 輸出摘要
 
 ```
@@ -116,7 +171,7 @@ TKT-004 [bug/high]       取消委託事件記錄至 transactions
 TKT-005 [feature/medium] 重掛單利用 snapshot polling 取買一賣一
 ...
 
-所有 ticket 已建立，確認後即可開始實作。
+所有 ticket 已建立，確認後即可開始實作（/dev）。
 ```
 
 不要自動開始寫程式。
@@ -146,13 +201,13 @@ TKT-005 [feature/medium] 重掛單利用 snapshot polling 取買一賣一
 ## 模式 3：結案模式（close TKT-NNN）
 
 > **前提：** ticket 必須在 `in-review/`，且**使用者已確認人工驗收通過**後才執行此模式。
-> Claude 不主動將 in-review 推進至 done，需使用者明確下指令 `/ticket close TKT-NNN`。
+> Claude 不主動將 in-review 推進至 done，需使用者明確下指令 `/pm close TKT-NNN`。
 
 1. 找到 ticket（在 `in-review/`）
 2. 移至 `docs/tickets/done/`
 3. 更新 front-matter：`status: done`、`updated: 今天`
 4. 「修改歷程」補：`- YYYY-MM-DD \`[結案]\` 一句話摘要解決方案`
-5. **自動執行 Wiki 同步**（等同 `/ticket wiki TKT-NNN`）：
+5. **自動執行 Wiki 同步**（等同 `/pm wiki TKT-NNN`）：
    - 讀取票的內容，判斷應同步至哪個 wiki 主題頁面
    - 依 `/wiki update <頁面>` 規格，**讀程式碼**確認現況後更新相關 wiki 頁面
    - 若無對應 wiki 頁面且 know-how 值得留存，建立新頁面
@@ -207,7 +262,6 @@ TKT-005 [feature/medium] 重掛單利用 snapshot polling 取買一賣一
 [todo]
   TKT-004  [feature/medium]  取消委託事件記錄至 transactions
   TKT-005  [feature/medium]  重掛單利用 snapshot polling
-  ...
 
 [in-progress]
   （空）
