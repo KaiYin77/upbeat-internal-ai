@@ -4,6 +4,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { execSync } from "child_process";
 
 const REDMINE_URL = (process.env.REDMINE_URL || "http://192.168.1.139:58088").replace(/\/+$/, "");
 const REDMINE_API_KEY = process.env.REDMINE_API_KEY || "";
@@ -49,8 +50,25 @@ async function req(method, path, { params, body } = {}) {
 
 const text = (s) => ({ content: [{ type: "text", text: s }] });
 
+function gitRef() {
+  const run = (cmd) => { try { return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { return ""; } };
+  const branch = run("git rev-parse --abbrev-ref HEAD");
+  const commit = run("git rev-parse --short HEAD");
+  const tag = run("git describe --tags --exact-match");
+  if (!branch && !commit) return "";
+  const ref = tag || commit;
+  return branch ? `branch \`${branch}\` @ \`${ref}\`` : `\`${ref}\``;
+}
+
 // Appended to all notes/descriptions — mirrors the "Co-Authored-By" footer in Claude Code git commits.
-const AGENT_FOOTER = "\n\n---\n*Author:* Kevin (Kai Yin Hong)\n*Co-authored-by:* [Claude Code](https://claude.ai/code) (claude-sonnet-4-6)";
+const GIT_REF = gitRef();
+const AGENT_FOOTER = [
+  "\n\n---",
+  "*Author:* Kevin (Kai Yin Hong)",
+  `*Co-authored-by:* [Claude Code](https://claude.ai/code) (claude-sonnet-4-6)`,
+  GIT_REF ? `*Code ref:* ${GIT_REF}` : null,
+  "*Powered by:* [upbeat-internal-ai](https://github.com/KaiYin77/upbeat-internal-ai) — internal AI skills & MCP tooling",
+].filter(Boolean).join("\n");
 const withMeta = (s) => (s ? s + AGENT_FOOTER : s);
 
 const mcp = new McpServer({ name: "Redmine MCP (Claude Code Agent)", version: "0.1.0" });

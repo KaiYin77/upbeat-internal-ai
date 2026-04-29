@@ -1,100 +1,152 @@
 # upbeat-internal-skills
 
-A pool of Claude Code **skills** (slash commands) and **MCP servers** for internal use. Pick what you want and install only those.
+內部 AI 輔助開發工具包 — Claude Code **slash commands** (skills) + **MCP servers**。  
+全公司共用，依需求挑選安裝。
+
+> **由 [upbeat-internal-ai](https://github.com/KaiYin77/upbeat-internal-ai) 維護**  
+> Internal AI tooling ecosystem for the UpbeatTech.
 
 ---
 
-## First-time install (one-liner)
+## 目錄 Contents
 
-**macOS / Linux / Git Bash:**
-```bash
-git clone https://github.com/KaiYin77/upbeat-internal-ai.git ~/upbeat-internal-ai && cd ~/upbeat-internal-ai && ./install.sh ticket develop wiki redmine
-```
-
-**Windows PowerShell:**
-```powershell
-git clone https://github.com/KaiYin77/upbeat-internal-ai.git $HOME\upbeat-internal-ai; cd $HOME\upbeat-internal-ai; .\install.ps1 ticket develop wiki redmine
-```
-
-The installer copies slash commands to `~/.claude/commands/`, runs `npm install` for MCPs, prompts for any required env vars (e.g. `REDMINE_URL`, `REDMINE_API_KEY`), and registers MCPs with `claude mcp add --scope user`. **Restart Claude Code** after install so commands and MCP servers load.
-
-Already cloned? Skip the `git clone` step and just run the installer with the components you want.
+- [快速安裝 Quick Install](#快速安裝-quick-install)
+- [Skills（Slash Commands）](#skillsslash-commands)
+- [MCP Server — Redmine](#mcp-server--redmine)
+- [新增元件 Adding a Component](#新增元件-adding-a-component)
 
 ---
 
-## What's inside
+## 快速安裝 Quick Install
 
-### Skills (`.claude/commands/*.md`)
+```bash
+# 列出所有可安裝項目 / List everything available
+./install.sh --list
 
-| Name | Slash command | What it does |
-|------|---------------|--------------|
-| `ticket` | `/ticket` | Ticket workflow on `docs/tickets/{todo,in-progress,in-review,done,archive}/` |
-| `develop` | `/develop` | Pick a ticket and walk through the full implementation flow |
-| `wiki` | `/wiki` | Write & maintain `docs/wiki/` from real source code |
+# 安裝全部 / Install all
+./install.sh ticket develop wiki redmine
 
-### MCPs (`*-mcp/`)
+# 只安裝指定項目 / Install specific components
+./install.sh redmine
 
-| Name | Tools | Notes |
-|------|-------|-------|
-| `redmine` | `list_projects`, `list_issues`, `get_issue`, `create_issue`, `update_issue`, `add_issue_note`, `delete_issue`, `list_issue_statuses`, `list_priorities`, `list_trackers`, `list_versions`, `list_users`, `list_memberships`, `list_time_entries`, `log_time`, `list_time_entry_activities`, `search_issues`, `get_project` | Node.js. Needs `REDMINE_URL` + `REDMINE_API_KEY` |
+# 移除 / Uninstall
+./install.sh --uninstall ticket redmine
+```
+
+安裝完成後**重啟 Claude Code**，slash commands 與 MCP servers 即生效。  
+After install, **restart Claude Code** so all commands and servers load.
 
 ---
 
-## Installer reference
+## Skills（Slash Commands）
 
-```powershell
-.\install.ps1 <name> [<name> ...]      # install named components
-.\install.ps1 --list                    # show all available skills + MCPs
-.\install.ps1 --uninstall <name>        # remove a component
+Skills 以 Markdown 定義，安裝後在 Claude Code 中用 `/指令名稱` 呼叫。  
+Skills are Markdown files — once installed, invoke them with `/command-name` in any Claude Code session.
+
+### `/ticket` — Ticket 管理流程
+
+開票 → 追蹤 → 驗收 → 結案 → Wiki 同步的完整循環。
+
+| 指令 | 動作 |
+|------|------|
+| `/ticket` 或 `/ticket new` | 從對話解析需求，自動在 `docs/tickets/todo/` 建立 tickets |
+| `/ticket move TKT-NNN <狀態>` | 移動至 `todo / in-progress / in-review / done / archive` |
+| `/ticket close TKT-NNN` | 結案並自動觸發 wiki 同步 |
+| `/ticket wiki TKT-NNN` | 從 `done/` ticket 沉澱 know-how 至 `docs/wiki/` |
+| `/ticket status` | 依資料夾列出所有 tickets |
+
+狀態流程：
+
+```
+archive ←→ todo → in-progress → in-review →（人工驗收）→ done
 ```
 
-Same flags work in `./install.sh` on macOS / Linux / Git Bash. Names can be any mix of skills and MCPs in any order.
+> `in-review` 不會自動推進，需人工確認後執行 `/ticket close`。
 
 ---
 
-## Manual install (if you don't want to run the script)
+### `/develop` — Ticket 驅動開發
 
-### Install a skill
+讀取 `todo/` + `in-progress/` 的 tickets，確認需求後進入實作循環，完成後移至 `in-review`。
 
-Copy the markdown file into your user-scope commands directory:
-
-```powershell
-# Windows
-Copy-Item .\.claude\commands\ticket.md $HOME\.claude\commands\ticket.md
 ```
-```bash
-# macOS / Linux
-cp .claude/commands/ticket.md ~/.claude/commands/ticket.md
+/develop           # 列出待開發 tickets，等待選擇
+/develop TKT-007   # 直接進入指定 ticket
+/develop all       # 批次模式：高優先度優先，逐張確認後實作
 ```
 
-The slash command (e.g. `/ticket`) is now available in every Claude Code session.
-
-### Install an MCP (`redmine` example)
-
-```bash
-cd redmine-mcp && npm install
-```
-
-Then register with Claude Code (run in a normal terminal, not inside a Claude session):
-
-```bash
-claude mcp add redmine \
-  --scope user \
-  -e REDMINE_URL=http://your-redmine-host:port \
-  -e REDMINE_API_KEY=your_api_key \
-  -- node "/absolute/path/to/redmine-mcp/server.js"
-```
-
-Verify:
-```bash
-claude mcp list
-```
-
-Restart Claude Code, then run `/mcp` inside a session to confirm `redmine` is connected.
+批次模式會先處理 `in-progress` 的票（避免半成品積壓），再依 `high → medium → low` 處理 `todo`。
 
 ---
 
-## Adding a new component to the pool
+### `/wiki` — 系統知識庫
 
-- **Skill:** drop a new `<name>.md` in `.claude/commands/` and add a row to the Skills table above.
-- **MCP:** create `<name>-mcp/` with a `package.json` (Node) or `pyproject.toml` (Python) and a `server.js` / `server.py` entry point. Add a row to the MCPs table above. The installer auto-detects any folder ending in `-mcp/`.
+以**程式碼現況為唯一來源**，撰寫並維護 `docs/wiki/`。寫作前必須先讀程式碼，wiki 只反映「現在的系統」。
+
+```
+/wiki new <主題>       # 讀程式碼，建立新頁面
+/wiki update <頁面>    # 讀程式碼，將現有頁面更新至最新狀態
+/wiki audit            # 掃描程式碼，找出 wiki 覆蓋缺口或過時頁面
+/wiki list             # 列出所有 wiki 頁面
+/wiki search <關鍵字>  # 全文搜尋
+```
+
+---
+
+## MCP Server — Redmine
+
+Node.js MCP server，將 Redmine REST API 封裝為 Claude Code 可直接呼叫的 tools。  
+A Node.js MCP server that exposes the Redmine REST API as Claude Code tools.
+
+**需求 Requirements：** Node.js ≥ 18、Redmine API Key
+
+**環境變數 Environment Variables：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `REDMINE_URL` | Redmine instance 網址 | `http://192.168.1.139:58088` |
+| `REDMINE_API_KEY` | Redmine API key | — |
+
+**可用 Tools：**
+
+| 分類 | Tools |
+|------|-------|
+| 專案 Projects | `list_projects`, `get_project` |
+| Issues | `list_issues`, `get_issue`, `create_issue`, `update_issue`, `add_issue_note`, `search_issues` |
+| Metadata | `list_issue_statuses`, `list_priorities`, `list_trackers` |
+| 版本 / 成員 | `list_versions`, `list_users`, `list_memberships` |
+| 工時 Time | `list_time_entries`, `log_time`, `list_time_entry_activities` |
+
+> **安全限制 Safety：** DELETE 操作被永久停用。Issues 只能關閉（變更狀態），不可刪除。
+
+---
+
+### Redmine Note Footer
+
+每筆由 Claude Code 寫入 Redmine 的 note 或 description，底部會自動附加 footer：
+
+```
+---
+*Author:* Kevin (Kai Yin Hong)
+*Co-authored-by:* [Claude Code](https://claude.ai/code) (claude-sonnet-4-6)
+*Code ref:* branch `main` @ `93274e6`
+*Powered by:* [upbeat-internal-ai](https://github.com/KaiYin77/upbeat-internal-ai) — internal AI skills & MCP tooling
+```
+
+- **`Code ref`** — server 啟動時自動讀取當前 git branch + commit hash（若有 git tag 則優先顯示 tag）
+- **`Powered by`** — 連結至本工具的來源 repo，方便團隊追蹤版本來源
+
+---
+
+## 新增元件 Adding a Component
+
+- **Skill：** 在 `.claude/commands/` 新增 `<name>.md`，並更新上方 Skills 表格。
+- **MCP：** 建立 `<name>-mcp/` 資料夾，放入 `package.json`（Node）或 `pyproject.toml`（Python）及 `server.js` / `server.py`。`install.sh` 會自動偵測所有 `*-mcp/` 結尾的資料夾。
+
+---
+
+## 相關資源 Related
+
+- [upbeat-internal-ai](https://github.com/KaiYin77/upbeat-internal-ai) — 本工具所屬的 AI 工具生態系 / Parent AI tooling ecosystem
+- [Claude Code Docs](https://docs.anthropic.com/claude-code) — Claude Code 官方文件
+- [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk) — Model Context Protocol TypeScript SDK
