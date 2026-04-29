@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Installer for upbeat-internal-skills
 # Usage:
-#   ./install.sh ticket develop wiki redmine    # install named components
-#   ./install.sh --list                          # list everything available
-#   ./install.sh --uninstall ticket redmine      # remove named components
+#   ./install.sh pm dev wiki redmine    # install named components
+#   ./install.sh --list                  # list everything available
+#   ./install.sh --uninstall pm redmine  # remove named components
 
 set -e
 
@@ -36,8 +36,8 @@ show_list() {
     list_mcps | sed 's|^|  |'
     echo
     echo "Install examples:"
-    echo "  ./install.sh ticket wiki redmine"
-    echo "  ./install.sh --uninstall ticket"
+    echo "  ./install.sh pm dev wiki redmine"
+    echo "  ./install.sh --uninstall pm"
     echo
 }
 
