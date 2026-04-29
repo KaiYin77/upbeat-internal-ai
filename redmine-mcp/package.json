@@ -1,0 +1,20 @@
+{
+  "name": "redmine-mcp",
+  "version": "0.1.0",
+  "description": "Redmine MCP server for Claude Code / Claude Desktop (Node.js)",
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "redmine-mcp": "server.js"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  }
+}

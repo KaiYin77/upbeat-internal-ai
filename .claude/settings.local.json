@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(chmod +x \"C:/Users/user/Documents/github/repo-upbeat/upbeat-internal-skills/install.sh\")",
+      "Bash(\"C:/Users/user/Documents/github/repo-upbeat/upbeat-internal-skills/install.sh\" --list)"
+    ]
+  }
+}
