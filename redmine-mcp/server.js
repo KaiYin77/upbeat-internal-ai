@@ -69,7 +69,9 @@ const AGENT_FOOTER = [
   GIT_REF ? `*Code ref:* ${GIT_REF}` : null,
   "*Powered by:* [upbeat-internal-ai](https://github.com/KaiYin77/upbeat-internal-ai) — internal AI skills & MCP tooling",
 ].filter(Boolean).join("\n");
-const withMeta = (s) => (s ? s + AGENT_FOOTER : s);
+// Strip any pre-existing agent footer before appending a fresh one, preventing duplication.
+const FOOTER_PATTERN = /\n\n---\n\*Author:\* Kevin[\s\S]*$/;
+const withMeta = (s) => (s ? s.replace(FOOTER_PATTERN, "") + AGENT_FOOTER : s);
 
 const mcp = new McpServer({ name: "Redmine MCP (Claude Code Agent)", version: "0.1.0" });
 
@@ -255,7 +257,7 @@ mcp.registerTool(
   "update_issue",
   {
     title: "Update issue",
-    description: "Update an existing issue. All fields optional. Use notes to add a comment.",
+    description: "Update an existing issue. All fields optional. Use notes to add a comment. Do NOT include an author/footer block in notes — it is appended automatically.",
     inputSchema: {
       issue_id: z.number().int(),
       subject: z.string().optional(),
@@ -293,7 +295,7 @@ mcp.registerTool(
   "add_issue_note",
   {
     title: "Add issue note",
-    description: "Add a journal note/comment to an existing issue.",
+    description: "Add a journal note/comment to an existing issue. Do NOT include an author/footer block in notes — it is appended automatically.",
     inputSchema: {
       issue_id: z.number().int(),
       notes: z.string(),
@@ -305,6 +307,22 @@ mcp.registerTool(
     if (priv) payload.issue.private_notes = true;
     await req("PUT", `/issues/${issue_id}.json`, { body: payload });
     return text(`Note added to issue #${issue_id}.`);
+  },
+);
+
+mcp.registerTool(
+  "update_journal_note",
+  {
+    title: "Update journal note",
+    description: "Edit the text of an existing journal note by journal id. Use get_issue with include_journals=true to find journal ids. The notes text is used as-is — no agent footer is appended.",
+    inputSchema: {
+      journal_id: z.number().int(),
+      notes: z.string(),
+    },
+  },
+  async ({ journal_id, notes }) => {
+    await req("PUT", `/journals/${journal_id}.json`, { body: { journal: { notes } } });
+    return text(`Journal #${journal_id} updated.`);
   },
 );
 
